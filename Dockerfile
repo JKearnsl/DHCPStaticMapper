@@ -8,4 +8,6 @@ RUN source venv/bin/activate
 RUN pip install -e .
 
 ENV PYTHONPATH=/code/src
-RUN python ./src/main.py
+WORKDIR /code/src/DHCPStaticMapper
+
+CMD python ./src/main.py
