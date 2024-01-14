@@ -1,4 +1,4 @@
-FROM python:3.12
+FROM python:3.12-alpine3.19
 
 COPY . /code
 WORKDIR /code
@@ -10,4 +10,4 @@ RUN pip install -e .
 ENV PYTHONPATH=/code/src
 WORKDIR /code/src/DHCPStaticMapper
 
-CMD python ./src/main.py
+CMD ["python", "./src/main.py"]
