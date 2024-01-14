@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "dhcpstaticmapper"
+version = "0.1.0"
+description = ""
+authors = ["JKearnsl <boyarshinovn@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+httpx = "^0.26.0"
+APScheduler = "^3.10.4"
+python-dotenv= "^1.0.0"
+beautifulsoup4 = "^4.12.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.packages]]
+include = "src/DHCPStaticMapper"
