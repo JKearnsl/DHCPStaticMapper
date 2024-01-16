@@ -3,7 +3,7 @@ from urllib.parse import urljoin
 
 import httpx
 
-from DHCPStaticMapper.types import (
+from DHCPStaticMapper.type import (
     IPADDR,
     MACADDR,
     HOSTNAME,
@@ -37,8 +37,7 @@ def dhcp_dynamic_leases_table(
         macaddr = row["mac"]
         hostname = row["hostname"]
         description = row["descr"]
-        interface = row["if_descr"]
-        orig_iface = row["if"]
+        interface = row["if"]
         lease_type = LeaseType(row["type"])
         end_time = row.get("end_time")
 
@@ -98,4 +97,4 @@ def dhcp_dynamic_leases_table(
             )
 
     table = list(filter(lambda _: _[5] == LeaseType.DYNAMIC, table))
-    return list(map(lambda _: (_[0], _[1], _[2], _[3], orig_iface), table))
+    return list(map(lambda _: (_[0], _[1], _[2], _[3], IFACE(iface)), table))
