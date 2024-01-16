@@ -43,10 +43,11 @@ def dhcp_dynamic_leases_table(
 
         if exclude_hostname and hostname == exclude_hostname:
             continue
-        table.append((ipaddr, macaddr, hostname, description, interface, lease_type, end_time))
 
-    if iface:
-        table = list(filter(lambda _: _[4] == iface, table))
+        if interface != iface:
+            continue
+
+        table.append((ipaddr, macaddr, hostname, description, interface, lease_type, end_time))
 
     for item in table:
         repeat_items = []
