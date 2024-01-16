@@ -41,16 +41,8 @@ def make_static_dhcp(http_client: httpx.Client, config: Config):
         logging.error("[StaticMapper] Failed to parse NTP")
         return
 
-    if ntp and not ntp[0] and not ntp[1]:
-        logging.error("[StaticMapper] NTP is not set")
-        return
-
     if not dns:
         logging.error("[StaticMapper] Failed to parse DNS")
-        return
-
-    if dns and not dns[0] and not dns[1]:
-        logging.error("[StaticMapper] DNS is not set")
         return
 
     for item in dhcp_leases:
@@ -82,10 +74,10 @@ def make_static_dhcp(http_client: httpx.Client, config: Config):
                 "hostname": hostname,
                 "descr": description,
                 "if": iface,
-                "ntp1": ntp[1],
-                "ntp2": ntp[0],
-                "dns1": dns[1],
-                "dns2": dns[0],
+                "ntp1": ntp[0],
+                "ntp2": ntp[1],
+                "dns1": dns[0],
+                "dns2": dns[1],
             }
         )
         if make_response.is_error:
@@ -97,6 +89,7 @@ def make_static_dhcp(http_client: httpx.Client, config: Config):
         http_client.headers.update({"X-CSRFToken": csrf[1]})
         apply_response = http_client.post(
             url=urljoin(config.BASE_URL, "/services_dhcp.php"),
+            params={"if": iface},
             data={
                 csrf[0]: csrf[1],
                 "apply": "Apply changes",
