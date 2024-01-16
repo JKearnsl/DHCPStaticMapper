@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from urllib.parse import urljoin
 
 import httpx
@@ -39,7 +40,7 @@ def dhcp_dynamic_leases_table(
         description = row["descr"]
         interface = row["if"]
         lease_type = LeaseType(row["type"])
-        end_time = row.get("end_time")
+        end_time = datetime.strptime(row["ends"], '%Y/%m/%d %H:%M:%S') if row["ends"] else None
 
         if exclude_hostname and hostname == exclude_hostname:
             continue
