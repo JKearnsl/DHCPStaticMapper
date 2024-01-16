@@ -11,7 +11,7 @@ LOGIN_ENV = "LOGIN"
 PASSWORD_ENV = "PASSWORD"
 DHCP_DOMAIN_ENV = "DHCP_DOMAIN"
 BASE_URL_ENV = "BASE_URL"
-IFACE_NAME_ENV = "IFACE_NAME"
+IFACE_ID_ENV = "IFACE_ID"
 SYNC_INTERVAL_SEC_ENV = "SYNC_INTERVAL_SEC"
 EXCLUDE_HOSTNAME_ENV = "EXCLUDE_HOSTNAME"
 
@@ -27,7 +27,7 @@ class Config:
     LOGIN: str
     PASSWORD: str
     BASE_URL: str
-    IFACE_NAME: str
+    IFACE_ID: str
     SYNC_INTERVAL_SEC: int
     EXCLUDE_HOSTNAME: str = None
 
@@ -75,7 +75,7 @@ def load_env_config(env_file: str | os.PathLike = None) -> Config:
         LOGIN=get_str_env(LOGIN_ENV),
         PASSWORD=get_str_env(PASSWORD_ENV),
         BASE_URL=get_str_env(BASE_URL_ENV),
-        IFACE_NAME=get_str_env(IFACE_NAME_ENV),
+        IFACE_ID=get_str_env(IFACE_ID_ENV),
         SYNC_INTERVAL_SEC=get_int_env(SYNC_INTERVAL_SEC_ENV),
         EXCLUDE_HOSTNAME=get_str_env(EXCLUDE_HOSTNAME_ENV, optional=True),
     )
