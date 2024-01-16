@@ -24,7 +24,8 @@ class LeaseType(Enum):
 def dhcp_dynamic_leases_table(
         http_client: httpx.Client,
         base_url: str,
-        iface: str
+        iface: str,
+        exclude_hostname: str = None,
 ) -> list[tuple[IPADDR, MACADDR, HOSTNAME, DESC, IFACE]] | None:
     logging.info("[DHCPv4] Getting list from DHCP")
     response = http_client.get(
@@ -48,6 +49,9 @@ def dhcp_dynamic_leases_table(
         orig_iface = row["if"]
         lease_type = LeaseType(row["type"])
         end_time = row.get("end_time")
+
+        if exclude_hostname and hostname == exclude_hostname:
+            continue
         table.append((ipaddr, macaddr, hostname, description, interface, lease_type, end_time))
 
     if iface:
@@ -161,7 +165,7 @@ def make_static_dhcp(http_client: httpx.Client, config: Config):
             return
 
     # Resources
-    dhcp_leases = dhcp_dynamic_leases_table(http_client, config.BASE_URL, config.IFACE_NAME)
+    dhcp_leases = dhcp_dynamic_leases_table(http_client, config.BASE_URL, config.IFACE_NAME, config.EXCLUDE_HOSTNAME)
 
     for item in dhcp_leases:
         ipaddr = item[0]

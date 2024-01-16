@@ -13,6 +13,7 @@ DHCP_DOMAIN_ENV = "DHCP_DOMAIN"
 BASE_URL_ENV = "BASE_URL"
 IFACE_NAME_ENV = "IFACE_NAME"
 SYNC_INTERVAL_SEC_ENV = "SYNC_INTERVAL_SEC"
+EXCLUDE_HOSTNAME_ENV = "EXCLUDE_HOSTNAME"
 
 
 class ConfigParseError(ValueError):
@@ -28,6 +29,7 @@ class Config:
     BASE_URL: str
     IFACE_NAME: str
     SYNC_INTERVAL_SEC: int
+    EXCLUDE_HOSTNAME: str = None
 
 
 def to_bool(value) -> bool:
@@ -74,5 +76,6 @@ def load_env_config(env_file: str | os.PathLike = None) -> Config:
         PASSWORD=get_str_env(PASSWORD_ENV),
         BASE_URL=get_str_env(BASE_URL_ENV),
         IFACE_NAME=get_str_env(IFACE_NAME_ENV),
-        SYNC_INTERVAL_SEC=get_int_env(SYNC_INTERVAL_SEC_ENV)
+        SYNC_INTERVAL_SEC=get_int_env(SYNC_INTERVAL_SEC_ENV),
+        EXCLUDE_HOSTNAME=get_str_env(EXCLUDE_HOSTNAME_ENV, optional=True),
     )
