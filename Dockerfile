@@ -10,4 +10,4 @@ RUN pip install -e .
 ENV PYTHONPATH=/code/src
 WORKDIR /code/src/DHCPStaticMapper
 
-CMD ["python", "./src/main.py"]
+CMD ["python", "main.py"]
