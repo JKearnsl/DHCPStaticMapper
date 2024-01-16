@@ -26,7 +26,7 @@ def make_static_dhcp(http_client: httpx.Client, config: Config):
     dhcp_leases = dhcp_dynamic_leases_table(http_client, config.BASE_URL, config.IFACE_ID, config.EXCLUDE_HOSTNAME)
 
     if not dhcp_leases:
-        logging.info("Nothing to do ")
+        logging.info("[StaticMapper] Nothing to do ")
         return
 
     # Parse NTP and DNS
