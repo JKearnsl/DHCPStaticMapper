@@ -1,20 +1,16 @@
 import logging
-from enum import Enum
-from typing import NewType
 from urllib.parse import urljoin
 
 import httpx
 
-IPADDR = NewType("IPADDR", str)
-MACADDR = NewType("MACADDR", str)
-HOSTNAME = NewType("HOSTNAME", str)
-DESC = NewType("DESC", str)
-IFACE = NewType("IFACE", str)
-
-
-class LeaseType(Enum):
-    STATIC = "static"
-    DYNAMIC = "dynamic"
+from DHCPStaticMapper.types import (
+    IPADDR,
+    MACADDR,
+    HOSTNAME,
+    DESC,
+    IFACE,
+    LeaseType
+)
 
 
 def dhcp_dynamic_leases_table(
@@ -51,7 +47,7 @@ def dhcp_dynamic_leases_table(
         table.append((ipaddr, macaddr, hostname, description, interface, lease_type, end_time))
 
     if iface:
-        table = list(filter(lambda item: item[4] == iface, table))
+        table = list(filter(lambda _: _[4] == iface, table))
 
     for item in table:
         repeat_items = []
@@ -93,12 +89,13 @@ def dhcp_dynamic_leases_table(
             table.remove(static_item)
         elif not static_item and dynamic_item:
             logging.info(
-                f"[DHCPv4] Choosing lease for hostname:{dynamic_item[2]!r} ip:{dynamic_item[0]!r} mac:{dynamic_item[1]!r}"
+                f"[DHCPv4] Choosing lease for hostname:{dynamic_item[2]!r} "
+                f"ip:{dynamic_item[0]!r} mac:{dynamic_item[1]!r}"
             )
         else:
             logging.critical(
                 f"[DHCPv4] No leases for hostname:{item[2]!r} ip:{item[0]!r} mac:{item[1]!r}"
             )
 
-    table = list(filter(lambda item: item[5] == LeaseType.DYNAMIC, table))
-    return list(map(lambda item: (item[0], item[1], item[2], item[3], orig_iface), table))
+    table = list(filter(lambda _: _[5] == LeaseType.DYNAMIC, table))
+    return list(map(lambda _: (_[0], _[1], _[2], _[3], orig_iface), table))
