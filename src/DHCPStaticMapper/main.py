@@ -1,7 +1,10 @@
+import json
 import logging
+from typing import Callable
 from urllib.parse import urljoin
 
 import httpx
+import pika
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from DHCPStaticMapper.auth import check_access, auth
@@ -10,7 +13,7 @@ from DHCPStaticMapper.dhcp_leases import dhcp_dynamic_leases_table
 from DHCPStaticMapper.utils import parse_csrf, parse_ntp, parse_dns
 
 
-def make_static_dhcp(http_client: httpx.Client, config: Config):
+def make_static_dhcp(http_client: httpx.Client, config: Config, rmq_sender: Callable[[list[dict]], None] | None = None):
     logging.info("[StaticMapper] Making static DHCP records")
 
     # Check access
@@ -100,8 +103,16 @@ def make_static_dhcp(http_client: httpx.Client, config: Config):
             logging.error("[StaticMapper] Failed to save static DHCP record")
             logging.error(apply_response.text)
             return
-
         logging.info(f"[StaticMapper] Made static DHCP record for hostname:{hostname!r} ip:{ipaddr!r} mac:{macaddr!r}")
+
+    if rmq_sender:
+        rmq_sender([{
+                "interface_name": dhcp_lease[4],
+                "ipv4": dhcp_lease[0],
+                "hostname": dhcp_lease[2],
+            } for dhcp_lease in dhcp_leases
+        ])
+
     logging.info("")
 
 
@@ -117,10 +128,50 @@ def main():
     )
     logging.getLogger("httpx").setLevel(logging.WARNING)
 
+    rmq_sender = None
+    if config.SEND_DATA_TO_RABBITMQ:
+        rmq_connection = pika.BlockingConnection(
+            pika.ConnectionParameters(
+                host=config.RABBITMQ_HOST,
+                port=config.RABBITMQ_PORT,
+                virtual_host=config.RABBITMQ_VH,
+                credentials=pika.PlainCredentials(
+                    config.RABBITMQ_USER,
+                    config.RABBITMQ_PASSWORD
+                )
+            )
+        )
+
+        rmq_channel = rmq_connection.channel()
+
+        rmq_channel.exchange_declare(
+            exchange=config.RABBITMQ_EXCHANGE,
+            exchange_type="direct",
+            durable=True,
+            auto_delete=False,
+            internal=False,
+        )
+        rmq_channel.queue_declare(
+            queue=config.RABBITMQ_QUEUE,
+            durable=True,
+            exclusive=False,
+            auto_delete=False,
+        )
+
+        rmq_sender = lambda data: rmq_channel.basic_publish(
+            exchange=config.RABBITMQ_EXCHANGE,
+            routing_key=config.RABBITMQ_QUEUE,
+            body=json.dumps(data),
+            properties=pika.BasicProperties(
+                delivery_mode=pika.DeliveryMode.Transient,
+                content_type="application/json",
+            )
+        )
+
     scheduler = BlockingScheduler()
     scheduler.add_job(
         make_static_dhcp,
-        args=(http_client, config),
+        args=(http_client, config, rmq_sender),
         trigger="interval",
         seconds=config.SYNC_INTERVAL_SEC,
     )
