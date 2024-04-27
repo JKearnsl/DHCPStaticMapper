@@ -10,7 +10,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from DHCPStaticMapper.auth import check_access, auth
 from DHCPStaticMapper.config import load_env_config, Config
 from DHCPStaticMapper.dhcp_leases import dhcp_dynamic_leases_table
-from DHCPStaticMapper.utils import parse_csrf, parse_ntp, parse_dns
+from DHCPStaticMapper.utils import parse_csrf, parse_ntp, parse_dns, parse_table
 
 
 def make_static_dhcp(http_client: httpx.Client, config: Config, rmq_sender: Callable[[list[dict]], None] | None = None):
@@ -25,13 +25,6 @@ def make_static_dhcp(http_client: httpx.Client, config: Config, rmq_sender: Call
             logging.error("[StaticMapper] Failed to check access after authentication")
             return
 
-    # Resources
-    dhcp_leases = dhcp_dynamic_leases_table(http_client, config.BASE_URL, config.IFACE_ID, config.EXCLUDE_HOSTNAME)
-
-    if not dhcp_leases:
-        logging.info("[StaticMapper] Nothing to do ")
-        return
-
     # Parse NTP and DNS
     form_response = http_client.get(
         url=urljoin(config.BASE_URL, "/services_dhcp.php"),
@@ -39,6 +32,15 @@ def make_static_dhcp(http_client: httpx.Client, config: Config, rmq_sender: Call
     )
     ntp = parse_ntp(form_response.text)
     dns = parse_dns(form_response.text)
+    table = parse_table(form_response.text)
+
+    if table and rmq_sender:
+        rmq_sender([{
+            "interface_name": row[2],
+            "ipv4": row[0],
+            "hostname": row[1],
+        } for row in table
+        ])
 
     if not ntp:
         logging.error("[StaticMapper] Failed to parse NTP")
@@ -46,6 +48,13 @@ def make_static_dhcp(http_client: httpx.Client, config: Config, rmq_sender: Call
 
     if not dns:
         logging.error("[StaticMapper] Failed to parse DNS")
+        return
+
+    # Resources
+    dhcp_leases = dhcp_dynamic_leases_table(http_client, config.BASE_URL, config.IFACE_ID, config.EXCLUDE_HOSTNAME)
+
+    if not dhcp_leases:
+        logging.info("[StaticMapper] Nothing to do ")
         return
 
     for item in dhcp_leases:
@@ -104,15 +113,6 @@ def make_static_dhcp(http_client: httpx.Client, config: Config, rmq_sender: Call
             logging.error(apply_response.text)
             return
         logging.info(f"[StaticMapper] Made static DHCP record for hostname:{hostname!r} ip:{ipaddr!r} mac:{macaddr!r}")
-
-    if rmq_sender:
-        rmq_sender([{
-                "interface_name": dhcp_lease[4],
-                "ipv4": dhcp_lease[0],
-                "hostname": dhcp_lease[2],
-            } for dhcp_lease in dhcp_leases
-        ])
-
     logging.info("")
 
 
@@ -158,13 +158,20 @@ def main():
             auto_delete=False,
         )
 
+        rmq_channel.queue_bind(
+            exchange=config.RABBITMQ_EXCHANGE,
+            queue=config.RABBITMQ_QUEUE,
+            routing_key=""
+        )
+
         rmq_sender = lambda data: rmq_channel.basic_publish(
             exchange=config.RABBITMQ_EXCHANGE,
-            routing_key=config.RABBITMQ_QUEUE,
+            routing_key="",
             body=json.dumps(data),
             properties=pika.BasicProperties(
                 delivery_mode=pika.DeliveryMode.Transient,
                 content_type="application/json",
+                expiration=str(config.SYNC_INTERVAL_SEC * 2 * 1000)
             )
         )
 

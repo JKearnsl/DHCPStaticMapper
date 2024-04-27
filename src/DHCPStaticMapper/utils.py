@@ -1,6 +1,8 @@
+import re
+
 from bs4 import BeautifulSoup
 
-from DHCPStaticMapper.type import IPADDR
+from DHCPStaticMapper.type import IPADDR, HOSTNAME, IFACE
 
 
 def parse_csrf(html: str) -> tuple[str, str] | None:
@@ -38,3 +40,26 @@ def parse_dns(html: str) -> tuple[IPADDR | None, IPADDR | None] | None:
         return None
 
     return dns_1.attrs.get("value"), dns_2.attrs.get("value")
+
+
+def parse_table(html: str) -> list[tuple[IPADDR, HOSTNAME, IFACE]]:
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Parse iface
+    iface_raw = soup.find("header", attrs={"class": "page-content-head"}).find("li").find("h1").text
+    pattern = r"\[(.*?)\]"
+
+    match = re.search(pattern, iface_raw)
+    iface = None if not match else match.group(1)
+
+    # Parse table
+    items = soup.find("table", attrs={"class": "table table-striped"}).find_all("tr")[2:]
+    result = []
+    for item in items:
+        row = item.find_all("td")
+        result.append((
+            row[2].text.replace("\n", "").strip(),
+            row[3].text.replace("\n", "").strip(),
+            iface or "unknown"
+        ))
+    return result
